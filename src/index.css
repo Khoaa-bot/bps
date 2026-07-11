@@ -1,0 +1,1 @@
+*{box-sizing:border-box}html{background:#f3f6fa;color:#17243b;font-family:"Segoe UI",Arial,sans-serif;font-size:14px}body{margin:0}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.48}#root{min-height:100dvh}::selection{background:#cfe1ff}

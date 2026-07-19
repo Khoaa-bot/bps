@@ -300,6 +300,14 @@ const routeFromHash = (): { page: Page; missionId?: string } => {
   return { page: "dashboard" };
 };
 
+const scenarioFromMission = (mission?: Mission): "Normal" | "Abnormal" =>
+  mission &&
+  (mission.status === "Normal" ||
+    mission.ai.includes("K-Means") ||
+    (mission.risk === "Low" && !mission.ai.includes("DBSCAN")))
+    ? "Normal"
+    : "Abnormal";
+
 const riskClass = (v: string) =>
   `badge ${["Critical", "Abnormal", "Emergency"].includes(v) ? "red" : ["High", "Medium", "Warning", "Under Review", "Analyzing", "In Progress", "Pending Approval", "Waiting Parts"].includes(v) ? "amber" : ["Low", "Normal", "Safe", "Completed", "Available", "Approved", "Safety Action Executed", "Closed"].includes(v) ? "green" : "gray"}`;
 
@@ -515,11 +523,18 @@ function App() {
       const route = routeFromHash();
       setPage(route.page);
       if (route.missionId) setSelectedId(route.missionId);
+      if (route.page === "analysis") {
+        setScenario(
+          scenarioFromMission(
+            missions.find((mission) => mission.id === route.missionId),
+          ),
+        );
+      }
       window.scrollTo(0, 0);
     };
     window.addEventListener("popstate", handleHistoryNavigation);
     return () => window.removeEventListener("popstate", handleHistoryNavigation);
-  }, [initialRoute]);
+  }, [initialRoute, missions]);
   useEffect(() => {
     const pageTitles: Record<Page, string> = {
       dashboard: "Dashboard",
@@ -540,6 +555,13 @@ function App() {
   const go = (p: Page, id?: string) => {
     const missionId = id || selectedId;
     if (id) setSelectedId(missionId);
+    if (p === "analysis") {
+      setScenario(
+        scenarioFromMission(
+          missions.find((mission) => mission.id === missionId),
+        ),
+      );
+    }
     setPage(p);
     window.history.pushState(
       { page: p, missionId },
@@ -571,6 +593,7 @@ function App() {
       updated: "Just now",
     };
     setMissions((x) => [m, ...x]);
+    if (analyze) setScenario("Abnormal");
     go(analyze ? "analysis" : "created", m.id);
   };
   const createAlert = (mission: Mission) => {
@@ -1697,7 +1720,7 @@ function AnalysisSummary({ abnormal }: { abnormal: boolean }) {
     <Card title="AI Result">
       <div className="summary-grid">
         {[
-          ["Model Used", "DBSCAN"],
+          ["Model Used", abnormal ? "DBSCAN" : "K-Means"],
           ["Cluster Label", abnormal ? "Outlier (-1)" : "Cluster C1"],
           ["Anomaly Score", abnormal ? "0.94" : "0.12"],
           ["Confidence Score", abnormal ? "96.8%" : "94.2%"],
@@ -1758,7 +1781,7 @@ function Analysis({
       });
     } else {
       update({
-        status: "Completed",
+        status: "Normal",
         risk: "Low",
         ai: "K-Means: C1",
         updated: "Just now",
@@ -1944,7 +1967,7 @@ function Analysis({
               body: "Are you sure you want to mark this flight as Normal?",
               action: () => {
                 update({
-                  status: "Completed",
+                  status: "Normal",
                   risk: "Low",
                   ai: "K-Means: C1",
                   updated: "Just now",
